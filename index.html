@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pilsen Bike Share</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#004169">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🚲 Pilsen Bike Share</h1>
+      <p class="subtitle">Favorite stations at a glance</p>
+    </header>
+
+    <button id="addStationBtn" class="btn btn-primary">+ Add Station</button>
+
+    <div id="stations" class="stations-list"></div>
+
+    <div id="map" class="map-container"></div>
+
+    <div id="modal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Add Station</h2>
+        <p class="hint">Select a station from the list below:</p>
+        <input type="text" id="searchInput" placeholder="Search stations..." />
+        <ul id="stationList"></ul>
+      </div>
+    </div>
+
+    <footer>
+      <span id="lastUpdate">Loading...</span>
+      <button id="refreshBtn" title="Refresh now">↻</button>
+    </footer>
+
+    <div class="report-section">
+      <a href="https://www.pmdp.cz/bike/nahlaseni-problemu/" target="_blank" rel="noopener">⚠ Report a problem with a bike</a>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

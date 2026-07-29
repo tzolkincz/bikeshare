@@ -1,0 +1,321 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f5f5f5;
+  color: #333;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+  padding-bottom: 80px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+header h1 {
+  font-size: 1.5rem;
+  color: #004169;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+/* Buttons */
+.btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.btn-primary {
+  background: #004169;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #003250;
+}
+
+/* Map */
+.map-container {
+  width: 100%;
+  height: 350px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-top: 24px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: #bbb;
+  font-size: 1.2rem;
+  padding: 0 8px 0 4px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.stations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.station-card {
+  background: white;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+.station-card .info {
+  flex: 1;
+}
+
+.station-card .name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.station-card .address {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.station-card .stats {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat .number {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stat .number.bikes {
+  color: #1a73e8;
+}
+
+.stat .number.docks {
+  color: #34a853;
+}
+
+.stat .label {
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.remove-btn {
+  background: none;
+  border: none;
+  color: #ea4335;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-left: 8px;
+}
+
+
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-content h2 {
+  margin-bottom: 12px;
+}
+
+.hint {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+
+#stationList {
+  list-style: none;
+}
+
+#stationList li {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+#stationList li:hover {
+  background: #f0f7ff;
+}
+
+#stationList li .name {
+  font-weight: 600;
+}
+
+#stationList li .address {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.close {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+footer {
+  text-align: center;
+  padding: 12px;
+  color: #888;
+  font-size: 0.8rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-section {
+  text-align: center;
+  padding: 16px;
+  background: #fce8e6;
+  margin-top: 20px;
+}
+
+.report-section a {
+  color: #ea4335;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+#refreshBtn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #004169;
+}
+
+.station-card.no-bikes {
+  border-left: 4px solid #ea4335;
+}
+
+.station-card.full {
+  border-left: 4px solid #ea4335;
+}
+
+.station-card.closed {
+  opacity: 0.5;
+  border-left: 4px solid #999;
+}
+
+.number-zero {
+  color: #ea4335 !important;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: #333;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  pointer-events: none;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #888;
+}
+
+.empty-state p {
+  margin-bottom: 8px;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #888;
+}
+
+.error {
+  background: #fce8e6;
+  color: #ea4335;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  text-align: center;
+}
