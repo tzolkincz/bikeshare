@@ -447,7 +447,8 @@ refreshBtn.addEventListener('click', fetchStations);
 
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js')
+  const swPath = location.pathname.includes('/bikeshare/') ? '/bikeshare/sw.js' : 'sw.js';
+  navigator.serviceWorker.register(swPath)
     .then(reg => console.log('Service Worker registered'))
     .catch(err => console.log('Service Worker registration failed:', err));
 }

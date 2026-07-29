@@ -1,13 +1,14 @@
-const CACHE_NAME = 'bikeshare-v2';
+const CACHE_NAME = 'bikeshare-v3';
+const BASE_PATH = '/bikeshare';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/manifest.json',
-  '/favicon.svg',
-  '/icon-192.png',
-  '/icon-512.png'
+  BASE_PATH + '/',
+  BASE_PATH + '/index.html',
+  BASE_PATH + '/style.css',
+  BASE_PATH + '/app.js',
+  BASE_PATH + '/manifest.json',
+  BASE_PATH + '/favicon.svg',
+  BASE_PATH + '/icon-192.png',
+  BASE_PATH + '/icon-512.png'
 ];
 
 // Install event - cache assets

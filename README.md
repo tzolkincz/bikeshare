@@ -1,6 +1,6 @@
 # Pilsen Bike Share PWA
 
-> ⚠️ Vibecoded slop — works, don't ask why.
+> ⚠️ Vibecoded slop
 
 A simple Progressive Web App to monitor bike availability at your favorite Pilsen bike sharing stations.
 

@@ -2,7 +2,7 @@
   "name": "Pilsen Bike Share",
   "short_name": "BikeShare",
   "description": "Check bike availability at your favorite Pilsen bike sharing stations",
-  "start_url": "/",
+  "start_url": "/bikeshare/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#004169",
