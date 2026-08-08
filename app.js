@@ -19,6 +19,7 @@ let favorites = JSON.parse(localStorage.getItem('bikeFavorites') || '[]');
 let updateInterval = null;
 let map = null;
 let markersLayer = null;
+let initialMapFit = true;
 
 // Initialize — map first, then data so markers render on load
 async function init() {
@@ -33,7 +34,14 @@ function initMap() {
   const mapEl = document.getElementById('map');
   if (!mapEl) return;
 
-  map = L.map('map').setView([49.7384, 13.3725], 13);
+  // Restore saved map position from localStorage, or use defaults
+  const savedView = JSON.parse(localStorage.getItem('mapView') || 'null');
+  const defaultCenter = [49.7384, 13.3725];
+  const defaultZoom = 13;
+  const center = savedView ? savedView.center : defaultCenter;
+  const zoom = savedView != null ? savedView.zoom : defaultZoom;
+
+  map = L.map('map').setView(center, zoom);
 
   // OpenStreetMap tiles (no API key needed)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -42,6 +50,12 @@ function initMap() {
   }).addTo(map);
 
   markersLayer = L.layerGroup().addTo(map);
+
+  // Save map position when the user moves or zooms
+  map.on('moveend zoomend', () => {
+    const view = { center: map.getCenter().latLng(), zoom: map.getZoom() };
+    localStorage.setItem('mapView', JSON.stringify(view));
+  });
 }
 
 // Update map markers when station data changes
@@ -81,17 +95,13 @@ function updateMapMarkers() {
     const cap = station.capacity != null ? ` | Capacity: ${station.capacity}` : '';
     marker.bindPopup(`<b>${escapeHtml(station.name)}</b><br>Bikes: ${bikes} | Docks: ${docks}${cap}`);
 
-    // Click on non-favorite marker to add as favorite
-    if (!isFav) {
-      marker.on('click', () => addFavorite(station.id));
-    }
-
     markersLayer.addLayer(marker);
   });
 
-  // Fit map to show all stations
-  if (bounds.length > 0) {
+  // Fit map to show all stations — only on initial load
+  if (bounds.length > 0 && initialMapFit) {
     map.fitBounds(bounds, { padding: [20, 20] });
+    initialMapFit = false;
   }
 }
 
