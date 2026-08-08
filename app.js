@@ -79,9 +79,9 @@ function updateMapMarkers() {
     else if (bikes > 0) color = '#34a853';
     else color = '#ea4335';
 
-    // Favorite stations get a larger / bold marker
-    const radius = isFav ? 12 : 7;
-    const weight = isFav ? 3 : 2;
+    // Uniform size for easier tapping
+    const radius = 14;
+    const weight = 2;
 
     const marker = L.circleMarker([station.lat, station.lon], {
       radius,
