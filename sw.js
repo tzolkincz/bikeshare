@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bikeshare-v3';
+const CACHE_NAME = 'bikeshare-v4';
 const BASE_PATH = '/bikeshare';
 const ASSETS = [
   BASE_PATH + '/',
@@ -35,6 +35,27 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Same-origin API requests: always prefer the network so data is never stale,
+  // and cache the latest successful response as an offline fallback.
+  // Note: cross-origin API calls (e.g. freebike.com) bypass the service worker
+  // entirely per spec, so this branch only applies if a same-origin proxy is used.
+  if (url.pathname.includes('/api/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request)) // offline: serve last known data
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then(response => {

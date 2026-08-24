@@ -107,6 +107,7 @@ function updateMapMarkers() {
 
 // Fetch stations from API (merges info + status)
 async function fetchStations() {
+  lastFetchTime = Date.now();
   try {
     const [infoRes, statusRes] = await Promise.all([
       fetch(STATION_INFO_URL),
@@ -144,6 +145,11 @@ async function fetchStations() {
     updateFavoriteStats();
     updateMapMarkers();
     updateLastUpdate();
+
+    // Gently confirm the refresh (skip on initial page load)
+    const wasInitial = isInitialLoad;
+    isInitialLoad = false;
+    if (!wasInitial && !document.hidden) showToast('✓ Data updated');
   } catch (error) {
     console.error('Error fetching stations:', error);
     showError('Failed to load station data. Retrying...');
@@ -325,6 +331,7 @@ function filterStations(query) {
 
 // Auto update
 let lastFetchTime = 0;
+let isInitialLoad = true;
 const MIN_FETCH_INTERVAL = 15000; // Minimum 15s between fetches to avoid spam
 
 function startAutoUpdate() {
@@ -339,6 +346,60 @@ function startAutoUpdate() {
       fetchStations();
     }
   });
+
+  setupVisibilityRefresh();
+}
+
+// Refresh instantly whenever the site is opened or brought back to the foreground,
+// even when the page was restored from cache (bfcache) by the browser.
+function setupVisibilityRefresh() {
+  // Back/forward cache restore — fires when a cached page is re-shown
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted && navigator.onLine) {
+      showToast('🔄 Updating station data…');
+      fetchStations();
+    }
+  });
+
+  // Tab/app became visible again (resumed from background, screen unlocked)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && navigator.onLine) maybeRefresh();
+  });
+
+  // Window regained focus (e.g. user switched back to the app)
+  window.addEventListener('focus', () => maybeRefresh());
+
+  // Network connection restored — refresh immediately
+  window.addEventListener('online', () => {
+    showToast('📶 Back online — updating…');
+    fetchStations();
+  });
+}
+
+// Refresh if data is older than MIN_FETCH_INTERVAL, otherwise skip
+function maybeRefresh() {
+  const now = Date.now();
+  if (now - lastFetchTime > MIN_FETCH_INTERVAL) {
+    lastFetchTime = now;
+    showToast('🔄 Updating station data…');
+    fetchStations();
+  }
+}
+
+// Gently notify the user about background refreshes with a small, auto-hiding toast
+let toastEl = null;
+let toastTimer = null;
+
+function showToast(message, duration = 2500) {
+  if (!toastEl) {
+    toastEl = document.createElement('div');
+    toastEl.className = 'toast';
+    document.body.appendChild(toastEl);
+  }
+  toastEl.textContent = message;
+  toastEl.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('visible'), duration);
 }
 
 // Update last update time display
