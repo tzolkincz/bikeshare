@@ -1,14 +1,15 @@
-const CACHE_NAME = 'bikeshare-v4';
-const BASE_PATH = '/bikeshare';
+const CACHE_NAME = 'bikeshare-v5';
+// Works both at the site root (dev server) and under a subpath like /bikeshare/
+const BASE_PATH = self.location.pathname.replace(/[^/]*$/, '').replace(/\/+$/, '');
 const ASSETS = [
-  BASE_PATH + '/',
-  BASE_PATH + '/index.html',
-  BASE_PATH + '/style.css',
-  BASE_PATH + '/app.js',
-  BASE_PATH + '/manifest.json',
-  BASE_PATH + '/favicon.svg',
-  BASE_PATH + '/icon-192.png',
-  BASE_PATH + '/icon-512.png'
+  `${BASE_PATH}/`,
+  `${BASE_PATH}/index.html`,
+  `${BASE_PATH}/style.css`,
+  `${BASE_PATH}/app.js`,
+  `${BASE_PATH}/manifest.json`,
+  `${BASE_PATH}/favicon.svg`,
+  `${BASE_PATH}/icon-192.png`,
+  `${BASE_PATH}/icon-512.png`
 ];
 
 // Install event - cache assets
@@ -63,7 +64,7 @@ self.addEventListener('fetch', (event) => {
         return fetch(event.request).catch(() => {
           // If offline and no cache, return a fallback page
           if (event.request.destination === 'document') {
-            return caches.match('/index.html');
+            return caches.match(BASE_PATH + '/index.html');
           }
         });
       })

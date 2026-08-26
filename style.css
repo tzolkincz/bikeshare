@@ -74,6 +74,9 @@ header h1 {
   padding: 0 8px 0 4px;
   user-select: none;
   -webkit-user-select: none;
+  /* Required for pointer-event dragging: without it, vertical touch movement
+     is taken over by page scrolling and the drag gets pointercancel'd */
+  touch-action: none;
 }
 
 .drag-handle:active {
@@ -125,20 +128,6 @@ header h1 {
   font-size: 1.1rem;
   font-weight: 700;
   line-height: 1;
-}
-
-.stat .number.bikes {
-  color: #1a73e8;
-}
-
-.stat .number.docks {
-  color: #34a853;
-}
-
-.stat .label {
-  font-size: 0.7rem;
-  color: #888;
-  text-transform: uppercase;
 }
 
 .remove-btn {
@@ -263,10 +252,7 @@ footer {
   color: #004169;
 }
 
-.station-card.no-bikes {
-  border-left: 4px solid #ea4335;
-}
-
+.station-card.no-bikes,
 .station-card.full {
   border-left: 4px solid #ea4335;
 }
@@ -274,10 +260,6 @@ footer {
 .station-card.closed {
   opacity: 0.5;
   border-left: 4px solid #999;
-}
-
-.number-zero {
-  color: #ea4335 !important;
 }
 
 .tooltip {
@@ -303,12 +285,6 @@ footer {
 
 .empty-state p {
   margin-bottom: 8px;
-}
-
-.loading {
-  text-align: center;
-  padding: 20px;
-  color: #888;
 }
 
 .error {

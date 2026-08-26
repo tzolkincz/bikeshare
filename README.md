@@ -58,8 +58,11 @@ http://YOUR_IP:8080
 
 ## API
 
-Data is fetched from the Freebike API:
-`https://pmdpbike.admin.freebike.com/api/public/stations`
+Data is fetched from the PMDP Freebike GBFS v3.0 API:
+- `https://pmdpbike.admin.freebike.com/api/gbfs/v30/station_information` (station list, names, capacity)
+- `https://pmdpbike.admin.freebike.com/api/gbfs/v30/station_status` (live bike/dock counts)
+
+Both are merged client-side; the status endpoint is keyed by `station_id`.
 
 ## Files
 

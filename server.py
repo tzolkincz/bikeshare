@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Simple HTTP server for Pilsen Bike Share PWA."""
 import http.server
-import socketserver
 import os
+import socket
 
 PORT = 8080
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -23,15 +23,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def guess_type(self, path):
         ext = os.path.splitext(path)[1]
-        return MIME_TYPES.get(ext, super().guess_type(path)[0])
+        # super().guess_type() returns a string (or None), not a tuple
+        return MIME_TYPES.get(ext) or super().guess_type(path)
 
     # Disable logging to reduce noise (optional: remove this line for debug)
     def log_message(self, format, *args):
         pass
 
-with socketserver.TCPServer(("", PORT), Handler) as httpd:
-    print(f"🚲 Pilsen Bike Share running at:")
-    print(f"  http://localhost:{PORT}")
-    print(f"  Open on your phone: http://{http.server.socketserver.getfqdn().split('.')[0] if '.' in http.server.socketserver.getfqdn() else 'YOUR_IP'}:{PORT}")
-    print(f"\nPress Ctrl+C to stop.")
-    httpd.serve_forever()
+# ThreadingHTTPServer handles concurrent requests and allows port reuse
+httpd = http.server.ThreadingHTTPServer(("", PORT), Handler)
+
+try:
+    local_ip = socket.gethostbyname(socket.gethostname())
+except OSError:
+    local_ip = None
+
+print(f"🚲 Pilsen Bike Share running at:")
+print(f"  http://localhost:{PORT}")
+if local_ip and not local_ip.startswith('127.'):
+    print(f"  Open on your phone: http://{local_ip}:{PORT}")
+else:
+    print(f"  Open on your phone: http://<your-machine-ip>:{PORT}")
+print(f"\nPress Ctrl+C to stop.")
+httpd.serve_forever()

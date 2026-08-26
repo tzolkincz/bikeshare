@@ -15,17 +15,32 @@ const refreshBtn = document.getElementById('refreshBtn');
 
 // State
 let allStations = [];
-let favorites = JSON.parse(localStorage.getItem('bikeFavorites') || '[]');
+// Guard against corrupted localStorage values so a bad value can't kill the whole app
+function loadJSON(key, fallback) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    return value == null ? fallback : value;
+  } catch {
+    return fallback;
+  }
+}
+// Guard against a stored value that is valid JSON but not an array
+const storedFavorites = loadJSON('bikeFavorites', []);
+let favorites = (Array.isArray(storedFavorites) ? storedFavorites : []).map(String);
 let updateInterval = null;
 let map = null;
 let markersLayer = null;
 let initialMapFit = true;
+let lastFetchTime = 0;
+let isInitialLoad = true;
+let fetchingStations = null;
+const MIN_FETCH_INTERVAL = 15000; // Minimum 15s between fetches to avoid spam
 
 // Initialize — map first, then data so markers render on load
 async function init() {
   initMap();
   await fetchStations();
-  renderFavorites();
+  updateFavoriteStats();
   startAutoUpdate();
 }
 
@@ -35,13 +50,16 @@ function initMap() {
   if (!mapEl) return;
 
   // Restore saved map position from localStorage, or use defaults
-  const savedView = JSON.parse(localStorage.getItem('mapView') || 'null');
+  const savedView = loadJSON('mapView', null);
   const defaultCenter = [49.7384, 13.3725];
   const defaultZoom = 13;
-  const center = savedView ? savedView.center : defaultCenter;
-  const zoom = savedView != null ? savedView.zoom : defaultZoom;
+  const center = savedView?.center || defaultCenter;
+  const zoom = savedView?.zoom ?? defaultZoom;
 
   map = L.map('map').setView(center, zoom);
+
+  // If the user has a saved view, don't let the initial fitBounds clobber it
+  if (savedView) initialMapFit = false;
 
   // OpenStreetMap tiles (no API key needed)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -51,10 +69,15 @@ function initMap() {
 
   markersLayer = L.layerGroup().addTo(map);
 
-  // Save map position when the user moves or zooms
+  // Save map position when the user moves or zooms (debounced — panning fires many events)
+  let viewSaveTimer = null;
   map.on('moveend zoomend', () => {
-    const view = { center: map.getCenter().latLng(), zoom: map.getZoom() };
-    localStorage.setItem('mapView', JSON.stringify(view));
+    clearTimeout(viewSaveTimer);
+    viewSaveTimer = setTimeout(() => {
+      // getCenter() already returns a LatLng ({lat, lng}); Leaflet accepts that shape on restore
+      const view = { center: map.getCenter(), zoom: map.getZoom() };
+      localStorage.setItem('mapView', JSON.stringify(view));
+    }, 500);
   });
 }
 
@@ -105,9 +128,15 @@ function updateMapMarkers() {
   }
 }
 
-// Fetch stations from API (merges info + status)
-async function fetchStations() {
-  lastFetchTime = Date.now();
+// Fetch stations from API (merges info + status).
+// Guarded so concurrent triggers (interval, focus, scroll, manual) share one request.
+async function fetchStations(options = {}) {
+  if (fetchingStations) return fetchingStations;
+  fetchingStations = doFetchStations(options).finally(() => { fetchingStations = null; });
+  return fetchingStations;
+}
+
+async function doFetchStations({ silent = false } = {}) {
   try {
     const [infoRes, statusRes] = await Promise.all([
       fetch(STATION_INFO_URL),
@@ -129,7 +158,7 @@ async function fetchStations() {
     allStations = (infoData.data?.stations || []).map(station => {
       const status = statusMap[String(station.station_id)];
       return {
-        id: station.station_id,
+        id: String(station.station_id),
         name: getName(station.name),
         lat: station.lat,
         lon: station.lon,
@@ -142,14 +171,15 @@ async function fetchStations() {
       };
     });
     
+    lastFetchTime = Date.now();
     updateFavoriteStats();
     updateMapMarkers();
     updateLastUpdate();
 
-    // Gently confirm the refresh (skip on initial page load)
+    // Gently confirm the refresh (skip on initial page load and background updates)
     const wasInitial = isInitialLoad;
     isInitialLoad = false;
-    if (!wasInitial && !document.hidden) showToast('✓ Data updated');
+    if (!wasInitial && !silent && !document.hidden) showToast('✓ Data updated');
   } catch (error) {
     console.error('Error fetching stations:', error);
     showError('Failed to load station data. Retrying...');
@@ -247,6 +277,7 @@ function createStationCard(station) {
 
 // Add station to favorites
 function addFavorite(id) {
+  id = String(id);
   if (!favorites.includes(id)) {
     favorites.push(id);
     localStorage.setItem('bikeFavorites', JSON.stringify(favorites));
@@ -258,6 +289,7 @@ function addFavorite(id) {
 
 // Remove station from favorites
 function removeFavorite(id) {
+  id = String(id);
   favorites = favorites.filter(fav => fav !== id);
   localStorage.setItem('bikeFavorites', JSON.stringify(favorites));
   updateFavoriteStats();
@@ -330,20 +362,15 @@ function filterStations(query) {
 }
 
 // Auto update
-let lastFetchTime = 0;
-let isInitialLoad = true;
-const MIN_FETCH_INTERVAL = 15000; // Minimum 15s between fetches to avoid spam
-
 function startAutoUpdate() {
   if (updateInterval) clearInterval(updateInterval);
-  updateInterval = setInterval(fetchStations, 60000); // Every 60 seconds
+  updateInterval = setInterval(() => fetchStations({ silent: true }), 60000); // Every 60 seconds
 
   // Also refresh when user scrolls to top of page
   window.addEventListener('scroll', () => {
     const now = Date.now();
     if (window.scrollY === 0 && now - lastFetchTime > MIN_FETCH_INTERVAL) {
-      lastFetchTime = now;
-      fetchStations();
+      fetchStations({ silent: true });
     }
   });
 
@@ -357,7 +384,7 @@ function setupVisibilityRefresh() {
   window.addEventListener('pageshow', (e) => {
     if (e.persisted && navigator.onLine) {
       showToast('🔄 Updating station data…');
-      fetchStations();
+      fetchStations({ silent: true });
     }
   });
 
@@ -372,7 +399,7 @@ function setupVisibilityRefresh() {
   // Network connection restored — refresh immediately
   window.addEventListener('online', () => {
     showToast('📶 Back online — updating…');
-    fetchStations();
+    fetchStations({ silent: true });
   });
 }
 
@@ -380,9 +407,8 @@ function setupVisibilityRefresh() {
 function maybeRefresh() {
   const now = Date.now();
   if (now - lastFetchTime > MIN_FETCH_INTERVAL) {
-    lastFetchTime = now;
     showToast('🔄 Updating station data…');
-    fetchStations();
+    fetchStations({ silent: true });
   }
 }
 
@@ -409,7 +435,10 @@ function updateLastUpdate() {
 }
 
 // Show error message
+let errorToken = 0;
+
 function showError(message) {
+  const token = ++errorToken;
   let errorDiv = document.getElementById('error');
   if (!errorDiv) {
     errorDiv = document.createElement('div');
@@ -418,10 +447,10 @@ function showError(message) {
     stationsDiv.parentNode.insertBefore(errorDiv, stationsDiv);
   }
   errorDiv.textContent = message;
-  
-  // Auto-remove after 5 seconds
+
+  // Auto-remove after 5 seconds (only if no newer error replaced it)
   setTimeout(() => {
-    if (errorDiv) errorDiv.remove();
+    if (token === errorToken && errorDiv.isConnected) errorDiv.remove();
   }, 5000);
 }
 
@@ -432,62 +461,61 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Make a station card draggable for reordering favorites
+// Make a station card draggable for reordering favorites.
+// Uses pointer events so mouse and touch share one code path (no double-firing).
 function makeDraggable(card, stationId) {
   const handle = card.querySelector('.drag-handle');
-  let startY = 0;
-  let currentCard = null;
 
   function onStart(e) {
     e.preventDefault();
-    startY = (e.touches ? e.touches[0].clientY : e.clientY);
-    currentCard = card;
     card.style.opacity = '0.5';
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('mouseup', onEnd);
-    document.addEventListener('touchend', onEnd);
+    // Capture so move/up keep firing on the handle even when the pointer leaves it
+    handle.setPointerCapture(e.pointerId);
   }
 
   function onMove(e) {
-    const y = (e.touches ? e.touches[0].clientY : e.clientY);
-    const delta = y - startY;
+    const y = e.clientY;
     // Find card we're hovering over
-    const target = document.elementFromPoint(
-      (e.touches ? e.touches[0].clientX : e.clientX),
-      y
-    );
+    const target = document.elementFromPoint(e.clientX, y);
     if (!target) return;
     const targetCard = target.closest('.station-card');
-    if (targetCard && targetCard !== currentCard) {
-      stationsDiv.insertBefore(currentCard, targetCard);
+    if (targetCard && targetCard !== card) {
+      // Insert before or after the target depending on which half is hovered,
+      // so cards can be moved both up and down.
+      const rect = targetCard.getBoundingClientRect();
+      const insertAfter = y > rect.top + rect.height / 2;
+      if (insertAfter) targetCard.after(card);
+      else stationsDiv.insertBefore(card, targetCard);
     }
   }
 
   function onEnd() {
     card.style.opacity = '1';
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('touchmove', onMove);
-    document.removeEventListener('mouseup', onEnd);
-    document.removeEventListener('touchend', onEnd);
-    // Save new order
-    favorites = [];
+    // Save new order. Favorites that aren't rendered (e.g. station missing from
+    // the latest data) are kept at their previous positions so a drag never
+    // silently deletes them.
+    const domOrder = [];
     stationsDiv.querySelectorAll('.station-card').forEach(c => {
       const id = c.querySelector('.remove-btn')?.dataset.id;
-      if (id) favorites.push(id);
+      if (id) domOrder.push(id);
     });
+    const missing = favorites.filter(id => !domOrder.includes(id));
+    favorites = [...domOrder, ...missing];
     localStorage.setItem('bikeFavorites', JSON.stringify(favorites));
   }
 
-  handle.addEventListener('mousedown', onStart);
-  handle.addEventListener('touchstart', onStart, { passive: false });
+  handle.addEventListener('pointerdown', onStart);
+  handle.addEventListener('pointermove', onMove);
+  handle.addEventListener('pointerup', onEnd);
+  handle.addEventListener('pointercancel', onEnd);
 }
 
 // Show tooltip on card click
 let activeTooltip = null;
+let tooltipTimer = null;
 
 function showTooltip(card, text) {
-  // Remove existing tooltip
+  // Remove existing tooltip and cancel its pending auto-hide so it can't hide the new one early
   hideTooltip();
 
   const tooltip = document.createElement('div');
@@ -497,10 +525,12 @@ function showTooltip(card, text) {
   activeTooltip = tooltip;
 
   // Auto-hide after 3 seconds or on next tap outside
-  setTimeout(hideTooltip, 3000);
+  clearTimeout(tooltipTimer);
+  tooltipTimer = setTimeout(hideTooltip, 3000);
 }
 
 function hideTooltip() {
+  clearTimeout(tooltipTimer);
   if (activeTooltip) {
     activeTooltip.remove();
     activeTooltip = null;
@@ -514,7 +544,12 @@ modal.addEventListener('click', (e) => {
   if (e.target === modal) closeModal();
 });
 searchInput.addEventListener('input', (e) => filterStations(e.target.value));
-refreshBtn.addEventListener('click', fetchStations);
+refreshBtn.addEventListener('click', () => fetchStations());
+
+// Close the modal with Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+});
 
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
